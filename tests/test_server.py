@@ -108,7 +108,7 @@ class ProtocolTests(unittest.TestCase):
         finally:
             server.CAPTURE_ENABLED, server.LOG = old_enabled, old_log
 
-    def test_widget_is_collapsible_and_cache_versioned(self):
+    def test_widget_is_collapsible_minimal_and_cache_versioned(self):
         response = server.handle({
             "jsonrpc": "2.0",
             "id": 5,
@@ -118,16 +118,14 @@ class ProtocolTests(unittest.TestCase):
         html = response["result"]["contents"][0]["text"]
         self.assertIn('aria-expanded="true"', html)
         self.assertIn("setCollapsed", html)
+        self.assertIn("firstSentence", html)
         self.assertIn("-webkit-tap-highlight-color: transparent", html)
         self.assertNotIn("setWidgetState", html)
-        self.assertIn("data-skin", html)
-        self.assertIn("#0097d0", html)
-        self.assertIn("#5ebfe0", html)
-        self.assertIn("#a6b7dd", html)
-        self.assertIn("#a4cdd1", html)
-        self.assertIn("#cbdbe1", html)
-        self.assertIn('id="skin"', html)
-        self.assertIn("v2.html", server.WIDGET_URI)
+        self.assertNotIn("data-skin", html)
+        self.assertNotIn('id="skin"', html)
+        self.assertNotIn('class="badge', html)
+        self.assertNotIn("linear-gradient", html)
+        self.assertIn("v3.html", server.WIDGET_URI)
 
     def test_unknown_resource_returns_error(self):
         response = server.handle({
@@ -137,3 +135,7 @@ class ProtocolTests(unittest.TestCase):
             "params": {"uri": "ui://widget/missing.html"},
         })
         self.assertEqual(response["error"]["code"], -32002)
+
+
+if __name__ == "__main__":
+    unittest.main()
