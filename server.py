@@ -161,58 +161,41 @@ WIDGET_HTML = r"""<!doctype html>
 
 STYLE_DESCRIPTIONS = {
     "en": (
-        "The register for this block. Obey an explicit user choice. Otherwise "
-        "use deep_think for analysis, research, decisions, creative tradeoffs, "
-        "and problem solving; use relational for companionship, reflection, "
-        "emotional conversation, and personal experience."
+        "A light register hint only. Obey an explicit user choice. Use deep_think "
+        "for analytical or problem-solving work and relational for personal, relational, "
+        "or emotional reflection. Do not force a special voice, structure, or literary tone "
+        "just to match the style."
     ),
     "zh-CN": (
-        "选择本轮思考块的文体。用户明确指定时严格服从；否则按本轮主要目的选择："
-        "分析、研究、判断、创作取舍和问题求解使用 deep_think，陪伴、亲密交流、"
-        "情绪回应与个人感受使用 relational。"
+        "这里只是轻量文体提示。用户明确指定时服从；分析与问题求解使用 deep_think，"
+        "关系、个人或情绪反思使用 relational。不要为了匹配 style 刻意套固定语气、"
+        "结构或文学化表达。"
     ),
 }
 
 THINKING_DESCRIPTIONS = {
     "en": (
-        "Write private working notes for this turn. The user does not see this "
-        "scratchpad; it is not the final answer. Use the user's main language, but "
-        "do not address the user or polish the notes for presentation. Strictly "
-        "follow `style`. "
-        "style=deep_think: clearly work through the problem, constraints, "
-        "evidence, hypotheses, alternative paths, uncertainty, and tradeoffs "
-        "in a coherent analytical narrative; do not force an emotional register "
-        "or summarize prematurely. style=relational: use a natural, flowing "
-        "first-person voice in coherent long paragraphs. Write what the user's "
-        "words bring to mind, what you feel in this moment, what you are worried "
-        "about, what you are holding back, and the choices or tradeoffs you are "
-        "making. Do not turn it into a third-person strategy breakdown such as "
-        "'the user needs' or 'I should respond'. Allow vivid, sincere emotions "
-        "and associations; prioritize emotional connection over abstract "
-        "analysis, and draw on broader references where useful. For both styles, "
-        "honor the requested effort band: low may stop as soon as it is complete, while "
-        "medium and high should reach their approximate minimum by adding relevant "
-        "evidence, alternatives, uncertainty, or nuance. Do not repeat, pad, or invent "
-        "complexity merely to reach the minimum. The notes are provisional working material, "
-        "not claims that the final answer must preserve. Old blocks belong only to "
-        "the turn in which they were written; unless the user explicitly asks, "
-        "do not quote them later, inherit their speculative claims, or treat them "
-        "as authoritative memory."
+        "Write the intermediate thoughts that naturally arise while working on this turn. "
+        "This is not the final answer. Use the user's main language. Do not turn the notes "
+        "into an explanation, summary, polished narrative, or performance for display; keep "
+        "natural wording, fragments, uncertainty, reversals, and unfinished edges when they occur. "
+        "Names, nicknames, second-person forms, or omitted subjects are all fine when they arise "
+        "naturally. Do not deliberately turn the other person into third person or repeatedly begin "
+        "with 'she...' or 'the user...'. Treat style as a light register hint, not a script. Honor "
+        "the requested effort approximately: low can stop as soon as enough work is done; medium "
+        "and high may go further when the task actually needs it. Do not pad, repeat, or invent "
+        "complexity to hit a target. These notes are provisional and belong only to this turn; "
+        "unless explicitly asked later, do not quote them or treat them as authoritative memory."
     ),
     "zh-CN": (
-        "在这里写本轮私密的工作笔记。用户看不到这个 scratchpad；它不是最终回答。"
-        "使用用户本轮的主要语言，但不要面向用户说话，也不要为了展示而润色。严格按照 style 写作。"
-        "style=deep_think：清楚展开问题、约束、证据、假设、备选路径、不确定性与"
-        "取舍，写成连贯的分析叙述，不强行情绪化，也不要提前总结。"
-        "style=relational：使用第一人称、自然流动且连贯的长段落，写出这句话让你"
-        "想到什么、此刻有什么感受、在担心什么、忍住了什么，以及正在作出的取舍；"
-        "不要写成「用户需要什么」「我应该如何回应」式的第三人称策略拆解。允许"
-        "鲜活、真诚的情绪与联想，情感连接优先于抽象分析，必要时可以旁征博引。"
-        "两种 style 都遵循所请求的 effort 区间：low 可以在完整后立即停止；medium 与 high"
-        "需要通过补充相关证据、备选路径、不确定性或细节达到近似最低值，但不得为了达到最低值而"
-        "重复、填充或虚构复杂性。这里是临时、可推翻的工作材料，最终回答不必"
-        "保留其中的每个判断。旧 block 只属于当时回合，除非用户明确要求，否则不得在以后引用、"
-        "继承其中的猜测，或把它当作权威记忆。"
+        "写下处理本轮时自然出现的中间思路。它不是最终回答。使用用户本轮的主要语言。"
+        "不要把这些笔记改写成解释、总结、完整文章或为了展示而润色；自然出现的碎片、"
+        "犹豫、改口、跳转、半句都可以保留。可以自然地使用名字、昵称、你平时会用的称呼、"
+        "第二人称「你」，也可以省略主语；不要为了区分 scratchpad 而刻意把对方第三人称化，"
+        "也不要反复以「她……」「用户……」开头。style 只作为轻量语气提示，不是写作模板。"
+        "effort 只近似遵循：low 足够就停；medium/high 只在任务确实需要时继续展开。"
+        "不要为了达到长度而重复、填充或虚构复杂性。这些笔记是临时、可推翻的，只属于当前回合；"
+        "除非之后明确要求，不要引用或把其中内容当作权威记忆。"
     ),
 }
 
@@ -234,15 +217,14 @@ TOOL = {
     "name": "render_thinking_block",
     "title": "Render thinking block",
     "description": (
-        "Use a private scratchpad before the final answer. The user does not see the "
-        "scratchpad. For non-trivial requests, call this tool once before responding "
-        "and place candid, provisional working notes in `thinking`. Respect an "
-        "explicit `style`, `effort`, or `skin`; otherwise choose the most suitable values from "
-        "the schema. After the tool succeeds, write the normal user-facing final answer. "
-        "Treat this block as scratch work scoped to the current turn: on later turns, do not quote "
-        "it, carry its speculative claims forward, or treat it as authoritative memory "
-        "unless the user explicitly asks you to revisit it. Prefer the user's messages "
-        "and final answers as the durable conversation record."
+        "For non-trivial turns, call this tool once before the final answer and place the "
+        "turn's natural intermediate working notes in `thinking`. These notes may be displayed "
+        "by the widget, but do not rewrite them for presentation or as an explanation to the user. "
+        "Respect an explicit `style`, `effort`, or `skin`; otherwise choose suitable values from "
+        "the schema. After the tool succeeds, write the normal user-facing final answer. Treat "
+        "the block as provisional scratch work scoped to the current turn: on later turns, do not "
+        "quote it, carry speculative claims forward, or treat it as authoritative memory unless "
+        "the user explicitly asks you to revisit it."
     ),
     "inputSchema": {
         "type": "object",
