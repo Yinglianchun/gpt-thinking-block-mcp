@@ -24,7 +24,7 @@ LOG = (pathlib.Path(_dir) if _dir else pathlib.Path(__file__).parent) / "capture
 CAPTURE_ENABLED = os.environ.get("CAPTURE_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
 BIND_HOST = os.environ.get("MCP_BIND", "127.0.0.1")
 PROTOCOL_FALLBACK = "2025-06-18"
-WIDGET_URI = "ui://widget/gpt-thinking-block-v5.html"
+WIDGET_URI = "ui://widget/gpt-thinking-block-v6.html"
 WIDGET_MIME = "text/html;profile=mcp-app"
 
 
@@ -129,12 +129,21 @@ WIDGET_HTML = r"""<!doctype html>
     const content = document.getElementById("thinking-content");
     let fullText = "";
 
-    function fiveCharacterPreview(text) {
-      return Array.from((text || "").trim()).slice(0, 5).join("");
+    function punctuationPreview(text) {
+      const chars = Array.from((text || "").trim());
+      if (!chars.length) return "";
+      const punctuation = new Set(["。", "，", "！", "？", "：", "；", "、", "…", ".", ",", "!", "?", ";", ":"]);
+      const limit = 16;
+      let preview = "";
+      for (let i = 0; i < chars.length && i < limit; i += 1) {
+        preview += chars[i];
+        if (punctuation.has(chars[i])) return preview;
+      }
+      return chars.slice(0, Math.min(limit, chars.length)).join("");
     }
 
     function paint() {
-      content.textContent = details.open ? fullText : fiveCharacterPreview(fullText);
+      content.textContent = details.open ? fullText : punctuationPreview(fullText);
     }
 
     details.addEventListener("toggle", paint);
@@ -407,7 +416,7 @@ def handle(req):
                         "openai/widgetPrefersBorder": False,
                         "openai/widgetDescription": (
                             "A minimal monochrome view showing only this turn's thinking text. "
-                            "Tap the text to collapse it to a five-character preview."
+                            "Tap the text to collapse it to the first punctuation, capped at 16 characters."
                         ),
                     },
                 }]
