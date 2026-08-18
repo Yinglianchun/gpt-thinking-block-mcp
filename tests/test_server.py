@@ -108,7 +108,7 @@ class ProtocolTests(unittest.TestCase):
         finally:
             server.CAPTURE_ENABLED, server.LOG = old_enabled, old_log
 
-    def test_widget_is_collapsible_minimal_and_cache_versioned(self):
+    def test_widget_is_native_collapsible_minimal_mobile_safe_and_cache_versioned(self):
         response = server.handle({
             "jsonrpc": "2.0",
             "id": 5,
@@ -116,16 +116,22 @@ class ProtocolTests(unittest.TestCase):
             "params": {"uri": server.WIDGET_URI},
         })
         html = response["result"]["contents"][0]["text"]
-        self.assertIn('aria-expanded="true"', html)
-        self.assertIn("setCollapsed", html)
-        self.assertIn("firstSentence", html)
-        self.assertIn("-webkit-tap-highlight-color: transparent", html)
-        self.assertNotIn("setWidgetState", html)
+        self.assertIn('<details id="thinking-details" open>', html)
+        self.assertIn('<summary id="thinking-content"', html)
+        self.assertIn("summary::-webkit-details-marker", html)
+        self.assertIn("-webkit-line-clamp: 2", html)
+        self.assertIn("overflow-wrap: anywhere", html)
+        self.assertIn("word-break: break-word", html)
+        self.assertIn("max-width: 100%", html)
+        self.assertIn("overflow-x: hidden", html)
+        self.assertIn("viewport-fit=cover", html)
+        self.assertNotIn("setCollapsed", html)
+        self.assertNotIn("firstSentence", html)
         self.assertNotIn("data-skin", html)
         self.assertNotIn('id="skin"', html)
         self.assertNotIn('class="badge', html)
         self.assertNotIn("linear-gradient", html)
-        self.assertIn("v3.html", server.WIDGET_URI)
+        self.assertIn("v4.html", server.WIDGET_URI)
 
     def test_unknown_resource_returns_error(self):
         response = server.handle({
