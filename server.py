@@ -24,7 +24,7 @@ LOG = (pathlib.Path(_dir) if _dir else pathlib.Path(__file__).parent) / "capture
 CAPTURE_ENABLED = os.environ.get("CAPTURE_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
 BIND_HOST = os.environ.get("MCP_BIND", "127.0.0.1")
 PROTOCOL_FALLBACK = "2025-06-18"
-WIDGET_URI = "ui://widget/gpt-thinking-block-v4.html"
+WIDGET_URI = "ui://widget/gpt-thinking-block-v5.html"
 WIDGET_MIME = "text/html;profile=mcp-app"
 
 
@@ -118,13 +118,6 @@ WIDGET_HTML = r"""<!doctype html>
       outline: 1px solid var(--focus);
       outline-offset: 3px;
     }
-    details:not([open]) summary {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      overflow: hidden;
-      white-space: normal;
-    }
   </style>
 </head>
 <body>
@@ -132,7 +125,19 @@ WIDGET_HTML = r"""<!doctype html>
     <summary id="thinking-content" title="Tap to collapse or expand"></summary>
   </details>
   <script>
+    const details = document.getElementById("thinking-details");
     const content = document.getElementById("thinking-content");
+    let fullText = "";
+
+    function fiveCharacterPreview(text) {
+      return Array.from((text || "").trim()).slice(0, 5).join("");
+    }
+
+    function paint() {
+      content.textContent = details.open ? fullText : fiveCharacterPreview(fullText);
+    }
+
+    details.addEventListener("toggle", paint);
 
     function render() {
       const api = window.openai || {};
@@ -144,7 +149,8 @@ WIDGET_HTML = r"""<!doctype html>
         || (responseMeta.call_tool_result && responseMeta.call_tool_result._meta)
         || responseMeta._meta
         || responseMeta;
-      content.textContent = resultMeta.thinking || input.thinking || output.thinking || "";
+      fullText = resultMeta.thinking || input.thinking || output.thinking || "";
+      paint();
     }
 
     window.addEventListener("openai:set_globals", render);
@@ -419,7 +425,7 @@ def handle(req):
                         "openai/widgetPrefersBorder": False,
                         "openai/widgetDescription": (
                             "A minimal monochrome view showing only this turn's thinking text. "
-                            "Tap the text to collapse it to a compact preview."
+                            "Tap the text to collapse it to a five-character preview."
                         ),
                     },
                 }]
