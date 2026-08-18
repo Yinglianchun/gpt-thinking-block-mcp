@@ -119,7 +119,9 @@ class ProtocolTests(unittest.TestCase):
         self.assertIn('<details id="thinking-details" open>', html)
         self.assertIn('<summary id="thinking-content"', html)
         self.assertIn("summary::-webkit-details-marker", html)
-        self.assertIn("-webkit-line-clamp: 2", html)
+        self.assertIn("fiveCharacterPreview", html)
+        self.assertIn('slice(0, 5).join("")', html)
+        self.assertIn('details.addEventListener("toggle", paint)', html)
         self.assertIn("overflow-wrap: anywhere", html)
         self.assertIn("word-break: break-word", html)
         self.assertIn("max-width: 100%", html)
@@ -131,7 +133,7 @@ class ProtocolTests(unittest.TestCase):
         self.assertNotIn('id="skin"', html)
         self.assertNotIn('class="badge', html)
         self.assertNotIn("linear-gradient", html)
-        self.assertIn("v4.html", server.WIDGET_URI)
+        self.assertIn("v5.html", server.WIDGET_URI)
 
     def test_unknown_resource_returns_error(self):
         response = server.handle({
