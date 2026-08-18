@@ -24,7 +24,7 @@ LOG = (pathlib.Path(_dir) if _dir else pathlib.Path(__file__).parent) / "capture
 CAPTURE_ENABLED = os.environ.get("CAPTURE_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
 BIND_HOST = os.environ.get("MCP_BIND", "127.0.0.1")
 PROTOCOL_FALLBACK = "2025-06-18"
-WIDGET_URI = "ui://widget/gpt-thinking-block-v3.html"
+WIDGET_URI = "ui://widget/gpt-thinking-block-v4.html"
 WIDGET_MIME = "text/html;profile=mcp-app"
 
 
@@ -51,7 +51,7 @@ WIDGET_HTML = r"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <style>
     :root {
       color-scheme: light dark;
@@ -70,82 +70,69 @@ WIDGET_HTML = r"""<!doctype html>
       }
     }
     * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: hidden;
+    }
     body {
       margin: 0;
-      padding: 1px 0;
+      padding: 1px 8px 1px 0;
       background: transparent;
       color: var(--text);
     }
-    .thinking-toggle {
+    details {
       display: block;
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+    }
+    summary {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
       margin: 0;
       padding: 0;
       border: 0;
       border-radius: 4px;
       background: transparent;
       color: var(--text);
-      text-align: left;
       cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
+      list-style: none;
+      outline: none;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
       font: 14px/1.65 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       letter-spacing: .002em;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
+      word-break: break-word;
     }
-    .thinking-toggle:hover { color: var(--text); }
-    .thinking-toggle:focus:not(:focus-visible) { outline: none; }
-    .thinking-toggle:focus-visible {
+    summary::-webkit-details-marker { display: none; }
+    summary::marker { content: ""; }
+    summary:focus-visible {
       outline: 1px solid var(--focus);
       outline-offset: 3px;
+    }
+    details:not([open]) summary {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      white-space: normal;
     }
   </style>
 </head>
 <body>
-  <button class="thinking-toggle" id="toggle" type="button"
-          aria-expanded="true" aria-controls="thinking-content"
-          title="Collapse">
-    <span id="thinking-content"></span>
-  </button>
+  <details id="thinking-details" open>
+    <summary id="thinking-content" title="Tap to collapse or expand"></summary>
+  </details>
   <script>
-    const toggle = document.getElementById("toggle");
     const content = document.getElementById("thinking-content");
-    let fullText = "";
-
-    function firstSentence(text) {
-      const clean = (text || "").trim();
-      if (!clean) return "";
-      const sentence = clean.match(/^[\s\S]*?[。！？!?](?:\s|$)/)
-        || clean.match(/^[\s\S]*?\.(?:\s|$)/);
-      if (sentence) return sentence[0].trim();
-      const firstLine = clean.split(/\n+/)[0].trim();
-      return firstLine || clean;
-    }
-
-    function paint() {
-      const collapsed = toggle.getAttribute("aria-expanded") !== "true";
-      if (!collapsed) {
-        content.textContent = fullText;
-        return;
-      }
-      const preview = firstSentence(fullText);
-      content.textContent = preview && preview.length < fullText.trim().length
-        ? preview + " …"
-        : preview;
-    }
-
-    function setCollapsed(collapsed) {
-      toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
-      toggle.title = collapsed ? "Expand" : "Collapse";
-      paint();
-    }
-
-    toggle.addEventListener("click", () => {
-      setCollapsed(toggle.getAttribute("aria-expanded") === "true");
-    });
 
     function render() {
       const api = window.openai || {};
@@ -157,8 +144,7 @@ WIDGET_HTML = r"""<!doctype html>
         || (responseMeta.call_tool_result && responseMeta.call_tool_result._meta)
         || responseMeta._meta
         || responseMeta;
-      fullText = resultMeta.thinking || input.thinking || output.thinking || "";
-      paint();
+      content.textContent = resultMeta.thinking || input.thinking || output.thinking || "";
     }
 
     window.addEventListener("openai:set_globals", render);
@@ -433,7 +419,7 @@ def handle(req):
                         "openai/widgetPrefersBorder": False,
                         "openai/widgetDescription": (
                             "A minimal monochrome view showing only this turn's thinking text. "
-                            "Tap the text to collapse it to a first-sentence preview."
+                            "Tap the text to collapse it to a compact preview."
                         ),
                     },
                 }]
