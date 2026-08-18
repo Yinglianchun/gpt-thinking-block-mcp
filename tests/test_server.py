@@ -22,18 +22,25 @@ class ProtocolTests(unittest.TestCase):
         response = server.handle({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
         tool = response["result"]["tools"][0]
         self.assertEqual(tool["name"], "render_thinking_block")
-        self.assertIn("scoped to the current turn", tool["description"])
-        self.assertIn("The user does not see the scratchpad", tool["description"])
+        self.assertIn("natural intermediate working notes", tool["description"])
+        self.assertIn("may be displayed by the widget", tool["description"])
         self.assertIn("normal user-facing final answer", tool["description"])
+
+        style_description = tool["inputSchema"]["properties"]["style"]["description"]
+        self.assertIn("light register hint only", style_description)
+        self.assertIn("Do not force a special voice", style_description)
+
         thinking_description = tool["inputSchema"]["properties"]["thinking"]["description"]
-        self.assertIn("private working notes", thinking_description)
-        self.assertIn("do not address the user", thinking_description)
-        self.assertIn("provisional working material", thinking_description)
-        self.assertIn("what you are holding back", thinking_description)
-        self.assertIn("prioritize emotional connection over abstract analysis", thinking_description)
-        self.assertIn("coherent long paragraphs", thinking_description)
-        self.assertIn("honor the requested effort band", thinking_description)
-        self.assertIn("Do not repeat, pad, or invent complexity", thinking_description)
+        self.assertIn("intermediate thoughts that naturally arise", thinking_description)
+        self.assertIn("This is not the final answer", thinking_description)
+        self.assertIn("Names, nicknames, second-person forms", thinking_description)
+        self.assertIn("Do not deliberately turn the other person into third person", thinking_description)
+        self.assertIn("repeatedly begin with 'she...' or 'the user...'", thinking_description)
+        self.assertIn("light register hint, not a script", thinking_description)
+        self.assertIn("Do not pad, repeat, or invent complexity", thinking_description)
+        self.assertNotIn("coherent long paragraphs", thinking_description)
+        self.assertNotIn("prioritize emotional connection over abstract analysis", thinking_description)
+
         effort_description = tool["inputSchema"]["properties"]["effort"]["description"]
         self.assertIn("Approximate token band", effort_description)
         self.assertIn("medium is over 700 and up to 1000", effort_description)
@@ -48,18 +55,21 @@ class ProtocolTests(unittest.TestCase):
         self.assertIn("glass-like morning light", skin["description"])
         self.assertIn("skin", tool["inputSchema"]["required"])
 
-    def test_original_chinese_prompt_edition_is_available(self):
+    def test_chinese_prompt_edition_is_available(self):
         self.assertEqual(server.normalize_prompt_language("zh"), "zh-CN")
         self.assertEqual(server.normalize_prompt_language("zh_CN"), "zh-CN")
         thinking_description = server.THINKING_DESCRIPTIONS["zh-CN"]
-        self.assertIn("用户看不到这个 scratchpad", thinking_description)
-        self.assertIn("不要面向用户说话", thinking_description)
-        self.assertIn("自然流动且连贯的长段落", thinking_description)
-        self.assertIn("在担心什么、忍住了什么", thinking_description)
-        self.assertIn("情感连接优先于抽象分析", thinking_description)
-        self.assertIn("必要时可以旁征博引", thinking_description)
-        self.assertIn("遵循所请求的 effort 区间", thinking_description)
-        self.assertIn("不得为了达到最低值而重复、填充或虚构复杂性", thinking_description)
+        self.assertIn("自然出现的中间思路", thinking_description)
+        self.assertIn("不要把这些笔记改写成解释、总结", thinking_description)
+        self.assertIn("名字、昵称、你平时会用的称呼", thinking_description)
+        self.assertIn("第二人称「你」", thinking_description)
+        self.assertIn("刻意把对方第三人称化", thinking_description)
+        self.assertIn("「她……」「用户……」", thinking_description)
+        self.assertIn("style 只作为轻量语气提示", thinking_description)
+        self.assertIn("不要为了达到长度而重复、填充或虚构复杂性", thinking_description)
+        self.assertNotIn("自然流动且连贯的长段落", thinking_description)
+        self.assertNotIn("情感连接优先于抽象分析", thinking_description)
+        self.assertIn("轻量文体提示", server.STYLE_DESCRIPTIONS["zh-CN"])
         self.assertIn("珍珠白", server.SKIN_DESCRIPTIONS["zh-CN"])
         self.assertIn("用户明确指定时必须遵循", server.SKIN_DESCRIPTIONS["zh-CN"])
 
