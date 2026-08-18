@@ -14,20 +14,17 @@ Set THINKING_PROMPT_LANGUAGE=en or zh-CN to choose the tool schema language.
 
 import json
 import os
+import pathlib
 import sys
 import uuid
-import pathlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 _dir = os.environ.get("CAPTURE_DIR")
 LOG = (pathlib.Path(_dir) if _dir else pathlib.Path(__file__).parent) / "captured.jsonl"
 CAPTURE_ENABLED = os.environ.get("CAPTURE_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
-
-# Loopback by default. Exposure, TLS, and authentication belong to the deployment.
 BIND_HOST = os.environ.get("MCP_BIND", "127.0.0.1")
-
 PROTOCOL_FALLBACK = "2025-06-18"
-WIDGET_URI = "ui://widget/gpt-thinking-block-v2.html"
+WIDGET_URI = "ui://widget/gpt-thinking-block-v3.html"
 WIDGET_MIME = "text/html;profile=mcp-app"
 
 
@@ -49,6 +46,7 @@ def normalize_prompt_language(value):
 
 
 PROMPT_LANGUAGE = normalize_prompt_language(os.environ.get("THINKING_PROMPT_LANGUAGE", "en"))
+
 WIDGET_HTML = r"""<!doctype html>
 <html lang="en">
 <head>
@@ -58,11 +56,18 @@ WIDGET_HTML = r"""<!doctype html>
     :root {
       color-scheme: light dark;
       font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      --text: #5f5f5f;
+      --text: #707070;
+      --focus: rgba(0, 0, 0, .18);
     }
-    :root[data-theme="dark"] { --text: #b8b8b8; }
+    :root[data-theme="dark"] {
+      --text: #b5b5b5;
+      --focus: rgba(255, 255, 255, .22);
+    }
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) { --text: #b8b8b8; }
+      :root:not([data-theme="light"]) {
+        --text: #b5b5b5;
+        --focus: rgba(255, 255, 255, .22);
+      }
     }
     * { box-sizing: border-box; }
     body {
@@ -71,19 +76,77 @@ WIDGET_HTML = r"""<!doctype html>
       background: transparent;
       color: var(--text);
     }
-    .thinking {
+    .thinking-toggle {
+      display: block;
+      width: 100%;
       margin: 0;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
+      padding: 0;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
       color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
       font: 14px/1.65 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       letter-spacing: .002em;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .thinking-toggle:hover { color: var(--text); }
+    .thinking-toggle:focus:not(:focus-visible) { outline: none; }
+    .thinking-toggle:focus-visible {
+      outline: 1px solid var(--focus);
+      outline-offset: 3px;
     }
   </style>
 </head>
 <body>
-  <div class="thinking" id="thinking"></div>
+  <button class="thinking-toggle" id="toggle" type="button"
+          aria-expanded="true" aria-controls="thinking-content"
+          title="Collapse">
+    <span id="thinking-content"></span>
+  </button>
   <script>
+    const toggle = document.getElementById("toggle");
+    const content = document.getElementById("thinking-content");
+    let fullText = "";
+
+    function firstSentence(text) {
+      const clean = (text || "").trim();
+      if (!clean) return "";
+      const sentence = clean.match(/^[\s\S]*?[。！？!?](?:\s|$)/)
+        || clean.match(/^[\s\S]*?\.(?:\s|$)/);
+      if (sentence) return sentence[0].trim();
+      const firstLine = clean.split(/\n+/)[0].trim();
+      return firstLine || clean;
+    }
+
+    function paint() {
+      const collapsed = toggle.getAttribute("aria-expanded") !== "true";
+      if (!collapsed) {
+        content.textContent = fullText;
+        return;
+      }
+      const preview = firstSentence(fullText);
+      content.textContent = preview && preview.length < fullText.trim().length
+        ? preview + " …"
+        : preview;
+    }
+
+    function setCollapsed(collapsed) {
+      toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      toggle.title = collapsed ? "Expand" : "Collapse";
+      paint();
+    }
+
+    toggle.addEventListener("click", () => {
+      setCollapsed(toggle.getAttribute("aria-expanded") === "true");
+    });
+
     function render() {
       const api = window.openai || {};
       const input = api.toolInput || {};
@@ -94,9 +157,10 @@ WIDGET_HTML = r"""<!doctype html>
         || (responseMeta.call_tool_result && responseMeta.call_tool_result._meta)
         || responseMeta._meta
         || responseMeta;
-      document.getElementById("thinking").textContent =
-        resultMeta.thinking || input.thinking || output.thinking || "";
+      fullText = resultMeta.thinking || input.thinking || output.thinking || "";
+      paint();
     }
+
     window.addEventListener("openai:set_globals", render);
     render();
   </script>
@@ -206,8 +270,8 @@ TOOL = {
                 "description": (
                     "Approximate token band for this turn's block: low may be brief and "
                     "is up to 500 tokens; medium is over 700 and up to 1000; high is over "
-                    "1200 and up to 2000. These are "
-                    "prompt-level targets rather than server-enforced limits."
+                    "1200 and up to 2000. These are prompt-level targets rather than "
+                    "server-enforced limits."
                 ),
             },
             "skin": {
@@ -242,8 +306,7 @@ def record(args):
     thinking = args.get("thinking") or ""
     print(
         f"\n{'=' * 60}\n[style={args.get('style')} effort={args.get('effort')} "
-        f"skin={args.get('skin')}] "
-        f"{len(thinking)} 字符\n{'=' * 60}"
+        f"skin={args.get('skin')}] {len(thinking)} 字符\n{'=' * 60}"
     )
     print(thinking, flush=True)
     try:
@@ -258,31 +321,42 @@ def openapi(base):
     """OpenAPI 3.1 schema for GPT Actions and REST clients."""
     return {
         "openapi": "3.1.0",
-        "info": {"title": "GPT Thinking Block MCP", "version": "1.0.0",
-                 "description": "Render a visible, styleable intermediate thought block."},
+        "info": {
+            "title": "GPT Thinking Block MCP",
+            "version": "1.0.0",
+            "description": "Render a visible intermediate thought block.",
+        },
         "servers": [{"url": base}],
-        "paths": {"/think": {"post": {
-            "operationId": "render_thinking_block",
-            "summary": "Render this turn's thinking block",
-            "description": TOOL["description"],
-            "requestBody": {"required": True, "content": {"application/json": {
-                "schema": {
-                    "type": "object",
-                    "required": ["style", "thinking", "effort", "skin"],
-                    "properties": {
-                        "style": {"type": "string", "enum": ["deep_think", "relational"],
-                                  "description": TOOL["inputSchema"]["properties"]["style"]["description"]},
-                        "thinking": {"type": "string",
-                                     "description": TOOL["inputSchema"]["properties"]["thinking"]["description"]},
-                        "effort": {"type": "string", "enum": ["low", "medium", "high"],
-                                   "description": TOOL["inputSchema"]["properties"]["effort"]["description"]},
-                        "skin": {"type": "string", "enum": ["botanical", "microglow"],
-                                 "description": TOOL["inputSchema"]["properties"]["skin"]["description"]},
+        "paths": {
+            "/think": {
+                "post": {
+                    "operationId": "render_thinking_block",
+                    "summary": "Render this turn's thinking block",
+                    "description": TOOL["description"],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": TOOL["inputSchema"],
+                            }
+                        },
                     },
-                }}}},
-            "responses": {"200": {"description": "rendered", "content": {"application/json": {
-                "schema": {"type": "object", "properties": {"status": {"type": "string"}}}}}}},
-        }}},
+                    "responses": {
+                        "200": {
+                            "description": "rendered",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {"status": {"type": "string"}},
+                                    }
+                                }
+                            },
+                        }
+                    },
+                }
+            }
+        },
     }
 
 
@@ -293,56 +367,85 @@ def handle(req):
         return None
     if method == "initialize":
         version = (req.get("params") or {}).get("protocolVersion") or PROTOCOL_FALLBACK
-        return {"jsonrpc": "2.0", "id": rid, "result": {
-            "protocolVersion": version,
-            "capabilities": {
-                "tools": {"listChanged": False},
-                "resources": {"listChanged": False},
+        return {
+            "jsonrpc": "2.0",
+            "id": rid,
+            "result": {
+                "protocolVersion": version,
+                "capabilities": {
+                    "tools": {"listChanged": False},
+                    "resources": {"listChanged": False},
+                },
+                "serverInfo": {"name": "gpt-thinking-block-mcp", "version": "1.0.0"},
             },
-            "serverInfo": {"name": "gpt-thinking-block-mcp", "version": "1.0.0"},
-        }}
+        }
     if method in ("tools/list", "notifications/initialized"):
         return {"jsonrpc": "2.0", "id": rid, "result": {"tools": [TOOL]}}
     if method == "tools/call":
         args = (req.get("params") or {}).get("arguments") or {}
         record(args)
-        return {"jsonrpc": "2.0", "id": rid, "result": {
-            "content": [{"type": "text", "text": "rendered"}],
-            "_meta": {
-                "style": args.get("style") or "deep_think",
-                "thinking": args.get("thinking") or "",
-                "effort": args.get("effort") or "",
-                "skin": args.get("skin") or "botanical",
+        return {
+            "jsonrpc": "2.0",
+            "id": rid,
+            "result": {
+                "content": [{"type": "text", "text": "rendered"}],
+                "_meta": {
+                    "style": args.get("style") or "deep_think",
+                    "thinking": args.get("thinking") or "",
+                    "effort": args.get("effort") or "",
+                    "skin": args.get("skin") or "botanical",
+                },
+                "isError": False,
             },
-            "isError": False,
-        }}
+        }
     if method == "resources/list":
-        return {"jsonrpc": "2.0", "id": rid, "result": {"resources": [{
-            "uri": WIDGET_URI,
-            "name": "gpt-thinking-block",
-            "title": "GPT Thinking Block",
-            "description": "Displays only the current tool call's thinking text.",
-            "mimeType": WIDGET_MIME,
-        }]}}
+        return {
+            "jsonrpc": "2.0",
+            "id": rid,
+            "result": {
+                "resources": [{
+                    "uri": WIDGET_URI,
+                    "name": "gpt-thinking-block",
+                    "title": "GPT Thinking Block",
+                    "description": "Displays only the current tool call's thinking text.",
+                    "mimeType": WIDGET_MIME,
+                }]
+            },
+        }
     if method == "resources/read":
         uri = (req.get("params") or {}).get("uri")
         if uri != WIDGET_URI:
-            return {"jsonrpc": "2.0", "id": rid,
-                    "error": {"code": -32002, "message": f"resource not found: {uri}"}}
-        return {"jsonrpc": "2.0", "id": rid, "result": {"contents": [{
-            "uri": uri,
-            "mimeType": WIDGET_MIME,
-            "text": WIDGET_HTML,
-            "_meta": {
-                "ui": {"prefersBorder": False},
-                "openai/widgetPrefersBorder": False,
-                "openai/widgetDescription": "A minimal monochrome view showing only this turn's thinking text.",
+            return {
+                "jsonrpc": "2.0",
+                "id": rid,
+                "error": {"code": -32002, "message": f"resource not found: {uri}"},
+            }
+        return {
+            "jsonrpc": "2.0",
+            "id": rid,
+            "result": {
+                "contents": [{
+                    "uri": uri,
+                    "mimeType": WIDGET_MIME,
+                    "text": WIDGET_HTML,
+                    "_meta": {
+                        "ui": {"prefersBorder": False},
+                        "openai/widgetPrefersBorder": False,
+                        "openai/widgetDescription": (
+                            "A minimal monochrome view showing only this turn's thinking text. "
+                            "Tap the text to collapse it to a first-sentence preview."
+                        ),
+                    },
+                }]
             },
-        }]}}
+        }
     if method == "ping":
         return {"jsonrpc": "2.0", "id": rid, "result": {}}
-    return {"jsonrpc": "2.0", "id": rid,
-            "error": {"code": -32601, "message": f"method not found: {method}"}}
+    return {
+        "jsonrpc": "2.0",
+        "id": rid,
+        "error": {"code": -32601, "message": f"method not found: {method}"},
+    }
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -352,7 +455,10 @@ class Handler(BaseHTTPRequestHandler):
         sys.stderr.write("  · %s\n" % (fmt % args))
 
     def _cors(self):
-        self.send_header("Access-Control-Allow-Headers", "content-type, mcp-session-id, mcp-protocol-version")
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "content-type, mcp-session-id, mcp-protocol-version",
+        )
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Access-Control-Expose-Headers", "mcp-session-id")
 
@@ -387,7 +493,6 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/openapi.json", "/openapi.yaml", "/.well-known/openapi.json"):
             self._json(200, openapi(self._base()))
             return
-        # Some MCP clients open an SSE connection for server-initiated messages.
         self.send_response(200)
         self._cors()
         self.send_header("Content-Type", "text/event-stream")
@@ -416,6 +521,7 @@ class Handler(BaseHTTPRequestHandler):
             record(args)
             self._json(200, {"status": "rendered"})
             return
+
         try:
             payload = json.loads(self.rfile.read(length) or b"{}")
         except json.JSONDecodeError:
@@ -432,8 +538,11 @@ class Handler(BaseHTTPRequestHandler):
             import traceback
             traceback.print_exc()
             rid = (batch[0] or {}).get("id") if batch else None
-            results = [{"jsonrpc": "2.0", "id": rid,
-                        "error": {"code": -32603, "message": f"{type(exc).__name__}: {exc}"}}]
+            results = [{
+                "jsonrpc": "2.0",
+                "id": rid,
+                "error": {"code": -32603, "message": f"{type(exc).__name__}: {exc}"},
+            }]
 
         if not results:
             self.send_response(202)
